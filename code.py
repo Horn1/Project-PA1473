@@ -36,6 +36,14 @@ grab.run_until_stalled(200, then=Stop.COAST, duty_limit=50)
 grab.reset_angle(0)
 grab.run_target(200, -90)
 
+#Define rotation possitions
+LEFT = 160
+MIDDLE = 100
+RIGHT = 40
+
+#Define elevation possitions
+UPP = 100
+DOWN = 30
 
 def robot_pick(position):
     #pick upp the brick
@@ -43,12 +51,11 @@ def robot_pick(position):
     # move to pickup position
     rotate.run_target(60, position)
     # Lower the arm
-    arm.run_target(60, -40)
+    arm.run_target(60, DOWN)
     # grab the block
     grab.run_until_stalled(200, then=Stop.HOLD, duty_limit=50)
     # Raise the arm
-    arm.run_target(60, 0)
-
+    arm.run_target(60, UPP)
 
 def robot_release(position):
     #the robot drops the brick on the correkt position
@@ -56,28 +63,34 @@ def robot_release(position):
     # Rotate to the drop-off position
     rotate.run_target(60, position)
     # Lower the arm
-    arm.run_target(60, -40)
+    arm.run_target(60, DOWN)
     # Open the gripper to relise the brick
     grab.run_target(200, -90)
     # Raise the arm
-    arm.run_target(60, 0)
-
+    arm.run_target(60, UPP)
 
 #indikation och reset complete
 for i in range(3):
     ev3.speaker.beep()
     wait(100)
 
-#Define rotation possitions
-LEFT = 160
-MIDDLE = 100
-RIGHT = 40
-
 #main loop
 while True:
-    # Move a brick from the left to the middle
+    block = arm_sensor.color()
+    # Move a brick från middle till position
+    if block == 'YELLOW':
+        robot_pick(MIDDLE)
+        robot_release(LEFT)
+    elif block == 'RED':
+        robot_pick(MIDDLE)
+    else:
+        robot_pick(MIDDLE)
+        robot_release(RIGHT)
+
+    #fLYTTAR FRÅN VÄNSTER TILL HÖGER
     robot_pick(LEFT)
-    robot_release(MIDDLE)
+    robot_pick(MIDDLE)
+
 
     # Move a brick from the right to the left
     robot_pick(RIGHT)
