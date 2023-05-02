@@ -2,7 +2,7 @@
 #import modules
 from pybricks.hubs import EV3Brick
 from pybricks.ev3devices import Motor, TouchSensor, ColorSensor
-from pybricks.parameters import Port, Stop, Direction
+from pybricks.parameters import Port, Stop, Direction, Color
 from pybricks.tools import wait
 
 #define motors and sensors
@@ -14,13 +14,10 @@ rotate = Motor(Port.C, Direction.COUNTERCLOCKWISE, [12, 36])#rotation motor
 arm.control.limits(speed=60, acceleration=120)#Limits in extention of the arm
 rotate.control.limits(speed=60, acceleration=120)#rotation limits
 base_switch = TouchSensor(Port.S1) #base tutch sensor
-arm_sensor = ColorSensor(Port.S3) #collor sensor
+arm_sensor = ColorSensor(Port.S2) #collor sensor
 
 #reset the arm
-arm.run_time(-30, 1000)
-arm.run(15)
-while arm_sensor.reflection() < 32:
-    wait(10)
+arm.run_until_stalled(-30, then=Stop.HOLD, duty_limit=7)
 arm.reset_angle(0)
 arm.hold()
 
@@ -37,25 +34,36 @@ grab.reset_angle(0)
 grab.run_target(200, -90)
 
 #Define rotation possitions
-LEFT = 160
-MIDDLE = 100
-RIGHT = 40
+PICKUP = 200
+LEFT = 140
+MIDLE_LEFT = 100
+MIDLE = 60
+RIGHT = 0
 
 #Define elevation possitions
-UPP = 100
-DOWN = 30
+UPP = 90
+DOWN = 0
+CHECK = 30
+
+#define collors
+RED = Color.RED
+YELLOW = Color.YELLOW
+GREEN = Color.GREEN
+BLUE = Color.BLUE
+BLACK = Color.BLACK
+BROWN = Color.BROWN
+color_list = [RED, YELLOW, GREEN, BLUE]
 
 def robot_pick(position):
     #pick upp the brick
-
     # move to pickup position
     rotate.run_target(60, position)
     # Lower the arm
-    arm.run_target(60, DOWN)
+    arm.run_until_stalled(-60,then=Stop.HOLD, duty_limit=20)
     # grab the block
     grab.run_until_stalled(200, then=Stop.HOLD, duty_limit=50)
     # Raise the arm
-    arm.run_target(60, UPP)
+    arm.run_target(60, CHECK)
 
 def robot_release(position):
     #the robot drops the brick on the correkt position
@@ -67,35 +75,86 @@ def robot_release(position):
     # Open the gripper to relise the brick
     grab.run_target(200, -90)
     # Raise the arm
-    arm.run_target(60, UPP)
+    arm.run_target(60, CHECK)
+
+def check_colors():
+    robot_pick(LEFT)
+    left_color = arm_sensor.color()
+    for i in range(50):
+        left_color = arm_sensor.color()
+        if left_color in color_list:
+            break
+    robot_release(LEFT)
+    
+    robot_pick(MIDLE_LEFT)
+    middle_left_color = arm_sensor.color()
+    for i in range(50):
+        middle_left_color = arm_sensor.color()
+        if middle_left_color in color_list:
+            break
+    robot_release(MIDLE_LEFT)
+
+    robot_pick(MIDLE)
+    middle_color = arm_sensor.color()
+    for i in range(50):
+        middle_color = arm_sensor.color()
+        if middle_color in color_list:
+            break
+    robot_release(MIDLE)
+
+    robot_pick(RIGHT)
+    right_color = arm_sensor.color()
+    for i in range(50):
+        right_color = arm_sensor.color()
+        if right_color in color_list:
+            break
+    robot_release(RIGHT)
+
+    print("left: " + str(left_color) +"middle_left: " + str(middle_left_color) + " middle: " + str(middle_color) + " right: "+ str(right_color))
 
 #indikation och reset complete
 for i in range(3):
     ev3.speaker.beep()
     wait(100)
+arm.run_target(60, CHECK)    
 
 #main loop
+tries = 0
+block = False
 while True:
-    block = arm_sensor.color()
+    robot_pick(PICKUP)
+    for i in range(50):
+        block = arm_sensor.color()
+        if block in color_list:
+            break
+
+    print(block)
+    print(tries)
     # Move a brick från middle till position
-    if block == 'YELLOW':
-        robot_pick(MIDDLE)
+    if block == YELLOW:
+        robot_release(MIDLE)
+        tries = 0
+    elif block == RED:
         robot_release(LEFT)
-    elif block == 'RED':
-        robot_pick(MIDDLE)
-    else:
-        robot_pick(MIDDLE)
+        tries = 0
+    elif block == GREEN:
         robot_release(RIGHT)
-
-    #fLYTTAR FRÅN VÄNSTER TILL HÖGER
-    robot_pick(LEFT)
-    robot_pick(MIDDLE)
-
-
-    # Move a brick from the right to the left
-    robot_pick(RIGHT)
-    robot_release(LEFT)
-
-    # Move a brick from the middle to the right
-    robot_pick(MIDDLE)
-    robot_release(RIGHT)
+        tries = 0
+    elif block == BLUE:
+        robot_release(MIDLE_LEFT)
+        tries = 0
+    elif grab.angle() >= 5:
+        tries += 1
+    elif tries >= 3:
+        wait(2000)
+        grab.run_target(200, -90)
+        check_colors()
+        tries = 0
+        wait(100000)
+    elif block == BLACK or BROWN:
+        for i in range(50):
+            block = arm_sensor.color()
+            if block in color_list:
+                break
+        grab.run_target(200, -90)
+        tries += 1
