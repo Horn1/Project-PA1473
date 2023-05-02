@@ -41,9 +41,8 @@ MIDLE = 60
 RIGHT = 0
 
 #Define elevation possitions
-UPP = 90
 DOWN = 0
-CHECK = 30
+CHECK = 45
 
 #define collors
 RED = Color.RED
@@ -150,10 +149,14 @@ while True:
         grab.run_target(200, -90)
         check_colors()
         tries = 0
-        wait(100000)
+        wait(10000)
     elif block == BLACK or BROWN:
         for i in range(50):
             block = arm_sensor.color()
+            arm.run_target(60, DOWN)
+            # Open the gripper to relise the brick
+            grab.run_target(200, -90)
+
             if block in color_list:
                 break
         grab.run_target(200, -90)
